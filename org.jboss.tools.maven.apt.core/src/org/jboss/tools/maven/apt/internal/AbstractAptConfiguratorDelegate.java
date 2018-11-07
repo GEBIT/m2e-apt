@@ -69,7 +69,7 @@ public abstract class AbstractAptConfiguratorDelegate implements AptConfigurator
   private static final String M2_REPO = "M2_REPO";
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractAptConfiguratorDelegate.class);
-  
+
   private static Method setGenTestSrcDirMethod = null;
   static {
     try {
@@ -122,7 +122,7 @@ public abstract class AbstractAptConfiguratorDelegate implements AptConfigurator
       return;
     }
 
-    // In case the Javaconfigurator was not called yet (eg. maven-processor-plugin being bound to process-sources, 
+    // In case the Javaconfigurator was not called yet (eg. maven-processor-plugin being bound to process-sources,
     // that project configurator runs first) We need to add the Java Nature before setting the APT config.
     if(!eclipseProject.hasNature(JavaCore.NATURE_ID)) {
       AbstractProjectConfigurator.addNature(eclipseProject, JavaCore.NATURE_ID, monitor);
@@ -130,7 +130,7 @@ public abstract class AbstractAptConfiguratorDelegate implements AptConfigurator
 
     File generatedSourcesDirectory = configuration.getOutputDirectory();
     File generatedTestSourcesDirectory = configuration.getTestOutputDirectory();
-    
+
     // If this project has no valid generatedSourcesDirectory, we have nothing to do
     if(generatedSourcesDirectory == null && generatedTestSourcesDirectory == null) {
       return;
@@ -140,7 +140,7 @@ public abstract class AbstractAptConfiguratorDelegate implements AptConfigurator
 
     //The plugin dependencies are added first to the classpath
     LinkedHashSet<File> resolvedJarArtifacts = new LinkedHashSet<>(getJars(configuration.getDependencies()));
-    
+
     // Get the project's dependencies
     if(configuration.isAddProjectDependencies()) {
       List<Artifact> artifacts = getProjectArtifacts(mavenFacade);
@@ -163,7 +163,7 @@ public abstract class AbstractAptConfiguratorDelegate implements AptConfigurator
       // Configure APT output path
       File generatedSourcesRelativeDirectory = convertToProjectRelativePath(eclipseProject, generatedSourcesDirectory);
       String generatedSourcesRelativeDirectoryPath = generatedSourcesRelativeDirectory.getPath();
-  
+
       AptConfig.setGenSrcDir(javaProject, generatedSourcesRelativeDirectoryPath);
     }
     if(generatedTestSourcesDirectory != null && setGenTestSrcDirMethod != null) {
@@ -176,17 +176,17 @@ public abstract class AbstractAptConfiguratorDelegate implements AptConfigurator
       }
     }
 
-    /* 
-     * Add all of the compile-scoped JAR artifacts to a new IFactoryPath (in 
+    /*
+     * Add all of the compile-scoped JAR artifacts to a new IFactoryPath (in
      * addition to the workspace's default entries).
-     * 
-     * Please note that--until JDT-APT supports project factory path entries 
+     *
+     * Please note that--until JDT-APT supports project factory path entries
      * (as opposed to just JARs)--this will be a bit wonky. Specifically, any
      * project dependencies will be excluded, but their transitive JAR
      * dependencies will be included.
-     * 
-     * Also note: we add the artifacts in reverse order as 
-     * IFactoryPath.addExternalJar(File) adds items to the top of the factory 
+     *
+     * Also note: we add the artifacts in reverse order as
+     * IFactoryPath.addExternalJar(File) adds items to the top of the factory
      * list.
      */
     List<File> resolvedJarArtifactsInReverseOrder = new ArrayList<>(resolvedJarArtifacts);
@@ -246,6 +246,18 @@ public abstract class AbstractAptConfiguratorDelegate implements AptConfigurator
     File generatedSourcesDirectory = configuration.getOutputDirectory();
     MavenProject mavenProject = mavenFacade.getMavenProject();
     IProject eclipseProject = mavenFacade.getProject();
+
+    //The plugin dependencies are added first to the classpath
+    LinkedHashSet<File> resolvedJarArtifacts = new LinkedHashSet<>(getJars(configuration.getDependencies()));
+
+    // Get the project's dependencies
+    if(configuration.isAddProjectDependencies()) {
+      List<Artifact> artifacts = getProjectArtifacts(mavenFacade);
+      resolvedJarArtifacts.addAll(filterToResolvedJars(artifacts));
+    }
+    if (!ProjectUtils.containsAptProcessors(resolvedJarArtifacts)) {
+      return;
+    }
 
     if(generatedSourcesDirectory != null) {
       addToClassPath(eclipseProject, generatedSourcesDirectory, null /* targetdirectory */, classpath, false);
